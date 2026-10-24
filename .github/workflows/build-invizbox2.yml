@@ -27,7 +27,14 @@ jobs:
         run: python3 -I resources/gen_nordvpn.py
 
       - name: Build InvizBox 2 image
-        run: ./build.sh 2
+        run: |
+          ./build.sh 2 || {
+            echo "::group::verbose retry of the failing package"
+            cd openwrt
+            make -j1 V=s package/firmware/cypress-firmware/download package/firmware/cypress-firmware/compile 2>&1 | tail -80
+            echo "::endgroup::"
+            exit 1
+          }
 
       - name: Checksums
         run: |
