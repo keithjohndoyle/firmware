@@ -26,12 +26,22 @@ jobs:
       - name: Regenerate NordVPN servers and templates
         run: python3 -I resources/gen_nordvpn.py
 
+      - name: Pre-seed a source file that upstream deleted
+        run: |
+          # murata-wireless/cyw-fmac-nvram removed this file from master; the same bytes
+          # (checked against the hash the OpenWrt package expects) live in older history.
+          bash resources/clone_or_update.bash
+          mkdir -p openwrt/dl
+          curl -sSfL -o openwrt/dl/cyfmac4354-sdio.1BB.txt \
+            https://raw.githubusercontent.com/murata-wireless/cyw-fmac-nvram/8710e74e79470f666912c3ccadf1e354d6fb209c/cyfmac4354-sdio.1BB.txt
+          echo "5ce686f94538c9fc3f8c328978869e36604400a39fa45751572627d29e41f0b7  openwrt/dl/cyfmac4354-sdio.1BB.txt" | sha256sum -c -
+
       - name: Build InvizBox 2 image
         run: |
           ./build.sh 2 || {
             echo "::group::verbose retry of the failing package"
             cd openwrt
-            make -j1 V=s package/firmware/cypress-firmware/download package/firmware/cypress-firmware/compile 2>&1 | tail -80
+            make -j1 V=s 2>&1 | tail -120
             echo "::endgroup::"
             exit 1
           }
